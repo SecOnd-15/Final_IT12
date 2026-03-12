@@ -24,8 +24,8 @@ class StockInController extends Controller
                 'l_name' => 'User'
             ]);
         },
+        'supplier',
         'items.product',
-        'items.supplier'
     ]);
 
     // Search
@@ -35,7 +35,7 @@ class StockInController extends Controller
             ->orWhereHas('items.product', function($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%');
             })
-            ->orWhereHas('items.supplier', function($q) use ($request) { 
+            ->orWhereHas('supplier', function($q) use ($request) { 
                 $q->where('supplier_name', 'like', '%' . $request->search . '%');
             });
         });
@@ -134,9 +134,9 @@ class StockInController extends Controller
                 'reference_no' => 'required|string|max:255',
                 'stock_in_date' => 'required|date',
                 'received_by_user_id' => 'required|exists:users,id',
+                'supplier_id' => 'required',
                 'items' => 'required|array|min:1',
-                'items.*.product_id' => 'required', // Flexible for new names
-                'items.*.supplier_id' => 'required', // Flexible for new names
+                'items.*.product_id' => 'required',
                 'items.*.quantity_received' => 'required|integer|min:1',
                 'items.*.actual_unit_cost' => 'required|numeric|min:0',
                 'items.*.retail_price' => 'required|numeric|min:0',
@@ -144,26 +144,41 @@ class StockInController extends Controller
     
             Log::info('Validated data:', $validated);
     
+            // Resolve supplier (supports new supplier by name)
+            $supplierId = $validated['supplier_id'];
+            if (!is_numeric($supplierId)) {
+                $supplier = Supplier::firstOrCreate(
+                    ['supplier_name' => $supplierId],
+                    ['is_active' => true]
+                );
+                $supplierId = $supplier->id;
+            }
+
+            // Calculate financial totals server-side from items
+            $subtotal = 0;
+            foreach ($validated['items'] as $item) {
+                $subtotal += (float)$item['quantity_received'] * (float)$item['actual_unit_cost'];
+            }
+            $subtotal = round($subtotal, 2);
+            $taxRate = max(0, min(100, (float)$request->input('tax_rate', 0)));
+            $taxAmount = round($subtotal * $taxRate / 100, 2);
+            $discountAmount = round(max(0, (float)$request->input('discount_amount', 0)), 2);
+            $totalCost = round($subtotal + $taxAmount - $discountAmount, 2);
+
             // Create stock in record
             $stockIn = StockIn::create([
                 'reference_no' => $validated['reference_no'],
                 'stock_in_date' => $validated['stock_in_date'],
                 'received_by_user_id' => $validated['received_by_user_id'],
-                'status' => 'completed',
+                'supplier_id' => $supplierId,
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'discount_amount' => $discountAmount,
+                'total_cost' => $totalCost,
             ]);
             
             // Process items
             foreach ($validated['items'] as $item) {
-                $supplierId = $item['supplier_id'];
-                // Handle new supplier
-                if (!is_numeric($supplierId)) {
-                    $supplier = Supplier::firstOrCreate(
-                        ['supplier_name' => $supplierId],
-                        ['is_active' => true]
-                    );
-                    $supplierId = $supplier->id;
-                }
-
                 $productId = $item['product_id'];
                 // Handle new product
                 if (!is_numeric($productId)) {
@@ -188,7 +203,6 @@ class StockInController extends Controller
                 StockInItem::create([
                     'stock_in_id' => $stockIn->id,
                     'product_id' => $productId,
-                    'supplier_id' => $supplierId,
                     'quantity_received' => $item['quantity_received'],
                     'actual_unit_cost' => $item['actual_unit_cost'],
                 ]);
@@ -232,7 +246,7 @@ class StockInController extends Controller
      */
     public function show(StockIn $stockIn)
     {
-        $stockIn->load(['receivedBy', 'items.supplier', 'items.product']);
+        $stockIn->load(['receivedBy', 'supplier', 'items.product']);
         return response()->json($stockIn);
     }
 

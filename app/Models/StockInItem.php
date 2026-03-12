@@ -10,7 +10,6 @@ class StockInItem extends Model
     protected $fillable = [
         'stock_in_id',
         'product_id',
-        'supplier_id', 
         'quantity_received',
         'actual_unit_cost'
     ];
@@ -23,10 +22,5 @@ class StockInItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');
-    }
-
-    public function supplier()
-    {
-        return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 }

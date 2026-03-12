@@ -362,13 +362,13 @@
                             </thead>
                             <tbody>
                                 @forelse($recentAdjustments as $adjustment)
-                                    <tr class="{{ $adjustment->quantity_change < 0 ? 'table-danger' : 'table-info' }}">
+                                    <tr class="{{ $adjustment->adjusted_quantity < 0 ? 'table-danger' : 'table-info' }}">
                                         <td>{{ $adjustment->adjustment_date->format('M d, H:i') }}</td>
                                         <td>{{ $adjustment->product_name }}</td>
                                         <td>{{ $adjustment->adjustment_type }}</td>
                                         <td>
-                                            <span class="{{ $adjustment->quantity_change < 0 ? 'text-danger' : 'text-success' }}">
-                                                {{ $adjustment->quantity_change > 0 ? '+' : '' }}{{ $adjustment->quantity_change }}
+                                            <span class="{{ $adjustment->adjusted_quantity < 0 ? 'text-danger' : 'text-success' }}">
+                                                {{ $adjustment->adjusted_quantity > 0 ? '+' : '' }}{{ $adjustment->adjusted_quantity }}
                                             </span>
                                         </td>
                                         <td>

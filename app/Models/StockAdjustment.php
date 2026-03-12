@@ -19,6 +19,9 @@ class StockAdjustment extends Model
         'adjustment_type',
         'reason_notes',
         'processed_by_user_id',
+        'approval_status',
+        'approved_by_user_id',
+        'approved_at',
     ];
 
     /**
@@ -36,6 +39,14 @@ class StockAdjustment extends Model
     public function processedBy()
     {
         return $this->belongsTo(User::class, 'processed_by_user_id');
+    }
+
+    /**
+     * Get the user who approved this adjustment.
+     */
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 
     /**

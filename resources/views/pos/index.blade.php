@@ -519,20 +519,25 @@
                             console.error('Search error:', data.message);
                             return { results: [] };
                         }
+
+                        // Get IDs of products already in the cart
+                        const cartProductIds = self.items.map(item => item.product.id);
                         
-                        // Format results for Select2
-                        const results = data.products.map(product => ({
-                            id: product.id,
-                            text: product.text,
-                            name: product.name,
-                            model: product.model,
-                            sku: product.sku,
-                            barcode: product.barcode,
-                            stock: product.stock,
-                            price: product.price,
-                            has_price: product.has_price,
-                            stock_status: product.stock_status
-                        }));
+                        // Format results for Select2, excluding already-added products
+                        const results = data.products
+                            .filter(product => !cartProductIds.includes(product.id))
+                            .map(product => ({
+                                id: product.id,
+                                text: product.text,
+                                name: product.name,
+                                model: product.model,
+                                sku: product.sku,
+                                barcode: product.barcode,
+                                stock: product.stock,
+                                price: product.price,
+                                has_price: product.has_price,
+                                stock_status: product.stock_status
+                            }));
                         
                         return {
                             results: results,
@@ -541,7 +546,7 @@
                             }
                         };
                     },
-                    cache: true
+                    cache: false
                 },
                 templateResult: this.formatProductOption.bind(this),
                 templateSelection: this.formatProductSelection.bind(this)

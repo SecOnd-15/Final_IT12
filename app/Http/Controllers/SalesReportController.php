@@ -118,8 +118,8 @@ class SalesReportController extends Controller
             'products.name',
             DB::raw('SUM(sale_items.quantity_sold) as total_quantity'),
             DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) as gross_revenue'),
-            DB::raw('COALESCE((SELECT SUM(ri.total_line_refund) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as returns_amount'),
-            DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) - COALESCE((SELECT SUM(ri.total_line_refund) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as total_revenue'),
+            DB::raw('COALESCE((SELECT SUM(ri.total_line_refunded) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as returns_amount'),
+            DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) - COALESCE((SELECT SUM(ri.total_line_refunded) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as total_revenue'),
             DB::raw('AVG(sale_items.unit_price) as avg_price')
         )
         ->addBinding([$startDate, $endDate, $startDate, $endDate], 'select')
@@ -137,8 +137,8 @@ class SalesReportController extends Controller
             'products.name',
             DB::raw('SUM(sale_items.quantity_sold) as total_quantity'),
             DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) as gross_revenue'),
-            DB::raw('COALESCE((SELECT SUM(ri.total_line_refund) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as returns_amount'),
-            DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) - COALESCE((SELECT SUM(ri.total_line_refund) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as total_revenue'),
+            DB::raw('COALESCE((SELECT SUM(ri.total_line_refunded) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as returns_amount'),
+            DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) - COALESCE((SELECT SUM(ri.total_line_refunded) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as total_revenue'),
             DB::raw('AVG(sale_items.unit_price) as avg_price')
         )
         ->addBinding([$startDate, $endDate, $startDate, $endDate], 'select')

@@ -90,6 +90,15 @@
                         <label class="form-label">Reference No. <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="reference_no" name="reference_no" placeholder="Invoice/Delivery Receipt Number" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Supplier <span class="text-danger">*</span></label>
+                        <select class="form-select" id="supplier_id" name="supplier_id" required>
+                            <option value="">Select Supplier</option>
+                            @foreach($suppliers as $supplier)
+                                <option value="{{ $supplier->id }}">{{ $supplier->supplier_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Right Column -->
@@ -117,6 +126,51 @@
                 </div>
                 <div id="items-container">
                     <!-- Items will be added here dynamically -->
+                </div>
+            </div>
+
+            <!-- Financial Summary -->
+            <div class="card bg-light mt-4" id="financial-summary">
+                <div class="card-body py-3">
+                    <h6 class="mb-3"><i class="bi bi-calculator me-1"></i> Financial Summary</h6>
+                    <div class="row justify-content-end">
+                        <div class="col-md-5">
+                            <table class="table table-sm mb-0">
+                                <tr>
+                                    <td class="text-muted">Subtotal</td>
+                                    <td class="text-end fw-semibold" id="fs-subtotal">₱0.00</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted">Tax</span>
+                                            <div class="input-group input-group-sm" style="width:90px;">
+                                                <input type="number" class="form-control" id="tax-rate-input" value="0" min="0" max="100" step="0.01" placeholder="0">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end" id="fs-tax">₱0.00</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted">Discount</span>
+                                            <div class="input-group input-group-sm" style="width:110px;">
+                                                <span class="input-group-text">₱</span>
+                                                <input type="number" class="form-control" id="discount-amount-input" value="0" min="0" step="0.01" placeholder="0">
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end text-danger" id="fs-discount">-₱0.00</td>
+                                </tr>
+                                <tr class="table-active">
+                                    <td><strong>Total Cost</strong></td>
+                                    <td class="text-end fw-bold text-primary" id="fs-total">₱0.00</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -206,21 +260,11 @@
                     <div class="item-row" id="item-${itemCount}">
                         <div class="row">
                             <!-- Product Selection -->
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label class="form-label">Product <span class="text-danger">*</span></label>
                                     <select class="form-select product-select" name="items[${itemCount}][product_id]" required>
                                         <option value="">Select Product</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Supplier Selection -->
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label class="form-label">Supplier <span class="text-danger">*</span></label>
-                                    <select class="form-select supplier-select" name="items[${itemCount}][supplier_id]" required>
-                                        <option value="">Select Supplier</option>
                                     </select>
                                 </div>
                             </div>
@@ -285,18 +329,6 @@
                     }))
                 });
 
-                // Initialize Select2 for supplier dropdown (show ALL suppliers)
-                const supplierSelect = $(`#item-${itemCount} .supplier-select`);
-                supplierSelect.select2({
-                    placeholder: "Select or type new supplier...",
-                    allowClear: true,
-                    tags: true,
-                    data: ALL_SUPPLIERS.map(supplier => ({
-                        id: supplier.id,
-                        text: supplier.supplier_name
-                    }))
-                });
-
                 // Track the current product for this row
                 let currentProductId = null;
 
@@ -314,6 +346,11 @@
 
                     currentProductId = newProductId;
                 });
+
+                // Listen for qty/cost changes to update financial summary
+                const thisContainer = document.getElementById(`item-${itemCount}`);
+                thisContainer.querySelector('.unit-cost').addEventListener('input', recalculateFinancials);
+                thisContainer.querySelector('input[name*="quantity_received"]').addEventListener('input', recalculateFinancials);
 
                 // Auto-select product if provided
                 if (productId) {
@@ -348,11 +385,6 @@
                 const product = PRODUCTS_DATA.find(p => p.id == productId);
                 if (!product) return;
 
-                // Auto-select default supplier if it exists
-                if (product.default_supplier_id) {
-                    $(`#item-${itemId} .supplier-select`).val(product.default_supplier_id).trigger('change');
-                }
-
                 // Auto-fill unit cost
                 const unitCostInput = itemRow.querySelector('.unit-cost');
                 if (product.latest_unit_cost) {
@@ -382,9 +414,6 @@
                 // Clear unit cost and retail price
                 itemRow.querySelector('.unit-cost').value = '';
                 itemRow.querySelector('.retail-price').value = '';
-                
-                // Clear supplier selection but keep all suppliers available
-                $(`#item-${itemId} .supplier-select`).val('').trigger('change');
             }
         
             function removeItem(itemId) {
@@ -398,11 +427,32 @@
                     addedProducts.delete(trackingValue);
                 }
                 
-                // Destroy Select2 before removing
-                select.select2('destroy');
-                $(row).find('.supplier-select').select2('destroy');
+                $(row).find('.product-select').select2('destroy');
                 row.remove();
+                recalculateFinancials();
             }
+
+            function recalculateFinancials() {
+                let subtotal = 0;
+                document.querySelectorAll('.item-row').forEach(item => {
+                    const qty = parseFloat(item.querySelector('input[name*="quantity_received"]').value) || 0;
+                    const cost = parseFloat(item.querySelector('.unit-cost').value) || 0;
+                    subtotal += qty * cost;
+                });
+                const taxRate = parseFloat(document.getElementById('tax-rate-input').value) || 0;
+                const taxAmount = subtotal * taxRate / 100;
+                const discountAmount = parseFloat(document.getElementById('discount-amount-input').value) || 0;
+                const totalCost = subtotal + taxAmount - discountAmount;
+                document.getElementById('fs-subtotal').textContent = '₱' + subtotal.toFixed(2);
+                document.getElementById('fs-tax').textContent = '₱' + taxAmount.toFixed(2);
+                document.getElementById('fs-discount').textContent = '-₱' + discountAmount.toFixed(2);
+                document.getElementById('fs-total').textContent = '₱' + Math.max(0, totalCost).toFixed(2);
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('tax-rate-input').addEventListener('input', recalculateFinancials);
+                document.getElementById('discount-amount-input').addEventListener('input', recalculateFinancials);
+            });
         
             // Add item button
             document.getElementById('add-item').addEventListener('click', () => addItemRow());
@@ -423,40 +473,44 @@
 
                 // Validate all items have required fields
                 let hasErrors = false;
+                const supplierIdVal = document.getElementById('supplier_id').value;
+                if (!supplierIdVal) {
+                    alert('Please select a supplier.');
+                    return;
+                }
                 items.forEach((item, index) => {
                     const productSelect = $(item).find('.product-select');
-                    const supplierSelect = $(item).find('.supplier-select');
                     const quantity = item.querySelector('input[name*="quantity_received"]').value;
                     const cost = item.querySelector('.unit-cost').value;
                     const price = item.querySelector('.retail-price').value;
                     
-                    if (!productSelect.val() || !supplierSelect.val() || !quantity || !cost || !price) {
+                    if (!productSelect.val() || !quantity || !cost || !price) {
                         alert(`Item ${index + 1} has missing fields. Please fill in all required fields.`);
                         hasErrors = true;
                     }
                 });
 
                 if (hasErrors) return;
+
+                const headerSupplierText = document.getElementById('supplier_id').options[document.getElementById('supplier_id').selectedIndex]?.text || 'Unknown Supplier';
         
                 // Build confirmation summary
                 let summary = `<strong>Reference:</strong> ${referenceNo}<br>`;
+                summary += `<strong>Supplier:</strong> ${headerSupplierText}<br>`;
                 summary += `<strong>Items:</strong> ${items.length}<br><br>`;
                 
                 items.forEach((item, index) => {
                     const productSelect = $(item).find('.product-select');
-                    const supplierSelect = $(item).find('.supplier-select');
                     const quantity = item.querySelector('input[name*="quantity_received"]').value;
                     const cost = item.querySelector('.unit-cost').value;
                     const price = item.querySelector('.retail-price').value;
                     
                     const productName = productSelect.select2('data')[0]?.text || 'Unknown Product';
-                    const supplierName = supplierSelect.select2('data')[0]?.text || 'Unknown Supplier';
                     summary += `
                     <div style="margin-bottom: 10px;">
                         <strong>Item ${index + 1}:</strong><br>
                         <div style="word-break: break-word; margin-left: 10px;">
                             <strong>Product:</strong> ${productName}<br>
-                            <strong>Supplier:</strong> ${supplierName}<br>
                             <strong>Quantity:</strong> ${quantity}<br>
                             <strong>Unit Cost:</strong> ₱${cost}<br>
                             <strong>Retail Price:</strong> ₱${price}
@@ -476,23 +530,34 @@
                 formData.append('reference_no', document.getElementById('reference_no').value);
                 formData.append('stock_in_date', document.getElementById('stock_in_date').value);
                 formData.append('received_by_user_id', document.getElementById('received_by_user_id').value);
+                formData.append('supplier_id', document.getElementById('supplier_id').value);
+
+                // Financial summary
+                const fsSubtotalText = document.getElementById('fs-subtotal').textContent.replace('₱', '');
+                const taxRate = parseFloat(document.getElementById('tax-rate-input').value) || 0;
+                const discountAmt = parseFloat(document.getElementById('discount-amount-input').value) || 0;
+                const fsSubtotal = parseFloat(fsSubtotalText) || 0;
+                const fsTax = fsSubtotal * taxRate / 100;
+                const fsTotal = Math.max(0, fsSubtotal + fsTax - discountAmt);
+                formData.append('subtotal', fsSubtotal.toFixed(2));
+                formData.append('tax_amount', fsTax.toFixed(2));
+                formData.append('discount_amount', discountAmt.toFixed(2));
+                formData.append('total_cost', fsTotal.toFixed(2));
         
                 // Items data
                 document.querySelectorAll('.item-row').forEach((item, index) => {
                     const productId = $(item).find('.product-select').val();
-                    const supplierId = $(item).find('.supplier-select').val();
                     const quantity = item.querySelector('input[name*="quantity_received"]').value;
                     const actualUnitCost = item.querySelector('.unit-cost').value;
                     const retailPrice = item.querySelector('.retail-price').value;
         
-                    if (!productId || !supplierId || !quantity || !actualUnitCost || !retailPrice) {
+                    if (!productId || !quantity || !actualUnitCost || !retailPrice) {
                         alert(`Item ${index + 1} has missing fields.`);
                         hasErrors = true;
                         return;
                     }
         
                     formData.append(`items[${index}][product_id]`, productId);
-                    formData.append(`items[${index}][supplier_id]`, supplierId);
                     formData.append(`items[${index}][quantity_received]`, quantity);
                     formData.append(`items[${index}][actual_unit_cost]`, actualUnitCost);
                     formData.append(`items[${index}][retail_price]`, retailPrice);

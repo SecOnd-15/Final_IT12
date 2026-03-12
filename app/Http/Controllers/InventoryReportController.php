@@ -62,7 +62,9 @@ class InventoryReportController extends Controller
                 'stock_adjustments.adjustment_date',
                 'stock_adjustments.adjustment_type',
                 'stock_adjustments.reason_notes',
-                'stock_adjustment_items.quantity_change',
+                'stock_adjustment_items.before_quantity',
+                'stock_adjustment_items.adjusted_quantity',
+                'stock_adjustment_items.after_quantity',
                 'stock_adjustment_items.unit_cost_at_adjustment',
                 DB::raw("CONCAT(users.f_name, ' ', COALESCE(users.m_name, ''), ' ', users.l_name) AS processed_by")
             )
@@ -299,14 +301,16 @@ class InventoryReportController extends Controller
                 'stock_adjustments.adjustment_date',
                 'stock_adjustments.adjustment_type',
                 'stock_adjustments.reason_notes as reason',
-                'stock_adjustment_items.quantity_change',
+                'stock_adjustment_items.before_quantity',
+                'stock_adjustment_items.adjusted_quantity',
+                'stock_adjustment_items.after_quantity',
                 DB::raw("CONCAT(users.f_name, ' ', COALESCE(users.m_name, ''), ' ', users.l_name) AS processed_by")
             )
             ->orderBy('stock_adjustments.adjustment_date', 'desc')
             ->get();
 
         return $this->exportToCSV($adjustments, 'stock-adjustments', [
-            'Date', 'Product', 'Change', 'Type', 'Reason', 'Processed By'
+            'Date', 'Product', 'Before', 'Adjusted', 'After', 'Type', 'Reason', 'Processed By'
         ]);
     }
 

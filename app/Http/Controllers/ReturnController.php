@@ -272,9 +272,9 @@ class ReturnController extends Controller
                     'sale_date' => $sale->sale_date,
                     'customer_name' => $sale->customer_name,
                     'customer_contact' => $sale->customer_contact,
-                    'total_amount' => $sale->items->sum(function ($item) {
-                        return $item->quantity_sold * $item->unit_price;
-                    }),
+                    'total_amount' => $sale->items->reduce(function ($carry, $item) {
+                        return $carry + ($item->quantity_sold * $item->unit_price);
+                    }, 0),
                     'items' => $saleItems
                 ]
             ]);
@@ -361,7 +361,7 @@ class ReturnController extends Controller
                     'sale_item_id' => $saleItem->id,
                     'quantity_returned' => $itemData['quantity'],
                     'refunded_price_per_unit' => $itemData['refund_amount'] / $itemData['quantity'],
-                    'total_line_refund' => $itemData['refund_amount'],
+                    'total_line_refunded' => $itemData['refund_amount'],
                     'inventory_adjusted' => $itemData['condition'] === 'resaleable'
                 ]);
 

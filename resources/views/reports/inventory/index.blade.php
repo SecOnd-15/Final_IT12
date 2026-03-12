@@ -261,10 +261,10 @@
                                     {{ $adj->product_name }}
                                 </td>
                                 <td class="text-end">
-                                    @if($adj->quantity_change > 0)
-                                        <span class="text-success fw-bold">+{{ $adj->quantity_change }}</span>
+                                    @if($adj->adjusted_quantity > 0)
+                                        <span class="text-success fw-bold">+{{ $adj->adjusted_quantity }}</span>
                                     @else
-                                        <span class="text-danger fw-bold">{{ $adj->quantity_change }}</span>
+                                        <span class="text-danger fw-bold">{{ $adj->adjusted_quantity }}</span>
                                     @endif
                                 </td>
                                 <td>{{ $adj->adjustment_type }}</td>

@@ -93,7 +93,6 @@ Route::middleware(['auth.simple'])->group(function () {
         });
 
         Route::resource('stock-adjustments', StockAdjustmentController::class);
-        Route::get('stock-adjustments/{id}/show', [StockAdjustmentController::class, 'show'])->name('stock-adjustments.show');
         
         Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
         Route::get('/sales/export-csv', [SaleController::class, 'exportCsv'])->name('sales.export.csv');
@@ -130,7 +129,6 @@ Route::middleware(['auth.simple'])->group(function () {
         Route::delete('/remove-item/{itemId}', [POSController::class, 'removeItem']);
         Route::get('/sale-items/{saleId}', [POSController::class, 'getSaleItems']);
         Route::post('/process-payment', [POSController::class, 'processPayment']);
-        Route::get('/receipt/{sale}/pdf', [POSController::class, 'downloadReceiptPDF']);
         Route::get('/receipt/{sale}/pdf', [POSController::class, 'downloadReceiptPDF'])->name('pos.receipt.pdf');
         Route::post('/complete-sale', [POSController::class, 'completeSale'])->name('pos.completeSale');
     });

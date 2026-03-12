@@ -79,7 +79,7 @@ class POSController extends Controller
                 'products' => $products
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'products' => [],
@@ -160,12 +160,20 @@ class POSController extends Controller
                 $change = 0;
             }
 
+            // Calculate financial totals (VAT-inclusive pricing, 12% VAT)
+            $subtotal = round($total / 1.12, 2);
+            $taxAmount = round($total - $subtotal, 2);
+
             // Create Sale
             $sale = Sale::create([
                 'user_id' => session('user_id'),
                 'sale_date' => now(),
                 'customer_name' => $customerName,
-                'customer_contact' => $customerContact
+                'customer_contact' => $customerContact,
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'discount_amount' => 0,
+                'total_amount' => $total,
             ]);
 
             // Create SaleItems & update stock

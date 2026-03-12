@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Exception;
 
 class StockAdjustmentController extends Controller
 {
@@ -100,14 +101,14 @@ class StockAdjustmentController extends Controller
         } elseif ($sort == 'net_qty_change') {
             // Sort by calculated net quantity change - FIXED VERSION
             $query->addSelect(['net_qty_change' => function($q) {
-                $q->selectRaw('COALESCE(SUM(quantity_change), 0)')
+                $q->selectRaw('COALESCE(SUM(adjusted_quantity), 0)')
                   ->from('stock_adjustment_items')
                   ->whereColumn('stock_adjustment_id', 'stock_adjustments.id');
             }])->orderBy('net_qty_change', $direction);
         } elseif ($sort == 'financial_impact') {
             // Sort by calculated financial impact - FIXED VERSION
             $query->addSelect(['financial_impact' => function($q) {
-                $q->selectRaw('COALESCE(SUM(quantity_change * unit_cost_at_adjustment), 0)')
+                $q->selectRaw('COALESCE(SUM(adjusted_quantity * unit_cost_at_adjustment), 0)')
                   ->from('stock_adjustment_items')
                   ->whereColumn('stock_adjustment_id', 'stock_adjustments.id');
             }])->orderBy('financial_impact', $direction);
@@ -153,7 +154,7 @@ class StockAdjustmentController extends Controller
                 'processed_by_user_id' => 'required|exists:users,id',
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|exists:products,id',
-                'items.*.quantity_change' => 'required|integer',
+                'items.*.adjusted_quantity' => 'required|integer',
                 'items.*.unit_cost_at_adjustment' => 'required|numeric|min:0',
             ]);
 
@@ -179,28 +180,30 @@ class StockAdjustmentController extends Controller
                 Log::info('Processing adjustment item:', $itemData);
                 
                 // Create stock adjustment item
+                $product = Product::find($itemData['product_id']);
+                $beforeQty = $product->quantity_in_stock;
+                $adjustedQty = $itemData['adjusted_quantity'];
+                $afterQty = $beforeQty + $adjustedQty;
+
                 $adjustmentItem = StockAdjustmentItem::create([
                     'stock_adjustment_id' => $stockAdjustment->id,
                     'product_id' => $itemData['product_id'],
-                    'quantity_change' => $itemData['quantity_change'],
+                    'before_quantity' => $beforeQty,
+                    'adjusted_quantity' => $adjustedQty,
+                    'after_quantity' => $afterQty,
                     'unit_cost_at_adjustment' => $itemData['unit_cost_at_adjustment'],
                 ]);
 
                 Log::info('StockAdjustment item created:', $adjustmentItem->toArray());
 
                 // Step 3: Update product stock
-                $product = Product::find($itemData['product_id']);
-                $oldStock = $product->quantity_in_stock;
-                
                 // Update the stock level
-                $product->increment('quantity_in_stock', $itemData['quantity_change']);
+                $product->increment('quantity_in_stock', $adjustedQty);
                 
-                $newStock = $product->quantity_in_stock;
-
-                Log::info("Product stock updated - Product ID: {$product->id}, Old: {$oldStock}, Change: {$itemData['quantity_change']}, New: {$newStock}");
+                Log::info("Product stock updated - Product ID: {$product->id}, Old: {$beforeQty}, Change: {$adjustedQty}, New: {$afterQty}");
 
                 // Calculate financial impact for this item
-                $itemFinancialImpact = $itemData['quantity_change'] * $itemData['unit_cost_at_adjustment'];
+                $itemFinancialImpact = $adjustedQty * $itemData['unit_cost_at_adjustment'];
                 $totalFinancialImpact += $itemFinancialImpact;
             }
 
@@ -220,7 +223,7 @@ class StockAdjustmentController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Rollback transaction on error
             DB::rollBack();
             

@@ -382,7 +382,7 @@
                                 <td>${item.product.sku}</td>
                                 <td>${item.quantity_returned}</td>
                                 <td class="text-end">₱${parseFloat(item.refunded_price_per_unit).toFixed(2)}</td>
-                                <td class="text-end">₱${parseFloat(item.total_line_refund).toFixed(2)}</td>
+                                <td class="text-end">₱${parseFloat(item.total_line_refunded).toFixed(2)}</td>
                                 <td>${item.inventory_adjusted ? 'Resaleable' : 'Damaged'}</td>
                                 <td>${item.inventory_adjusted ? 'Restocked' : 'Scrapped/Loss'}</td>
                             `;

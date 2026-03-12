@@ -16,14 +16,14 @@ class ReturnItem extends Model
         'sale_item_id',
         'quantity_returned',
         'refunded_price_per_unit',
-        'total_line_refund',
+        'total_line_refunded',
         'inventory_adjusted'
     ];
 
     protected $casts = [
         'quantity_returned' => 'integer',
         'refunded_price_per_unit' => 'decimal:2',
-        'total_line_refund' => 'decimal:2',
+        'total_line_refunded' => 'decimal:2',
         'inventory_adjusted' => 'boolean'
     ];
 

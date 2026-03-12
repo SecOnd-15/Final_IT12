@@ -104,8 +104,10 @@ class SaleController extends Controller
         return response()->json($sale);
     }
 
-    private function applyDateFilter($query, $request)
+    private function applyDateFilter($query, $request, $tablePrefix = null)
     {
+        $col = $tablePrefix ? "{$tablePrefix}.sale_date" : 'sale_date';
+
         $dateFilter = $request->input('date_filter');
         
         if ($dateFilter) {
@@ -113,40 +115,40 @@ class SaleController extends Controller
             
             switch ($dateFilter) {
                 case 'today':
-                    $query->whereDate('sale_date', $today);
+                    $query->whereDate($col, $today);
                     break;
                 case 'this_week':
-                    $query->whereBetween('sale_date', [
+                    $query->whereBetween($col, [
                         $today->copy()->startOfWeek(),
                         $today->copy()->endOfWeek()
                     ]);
                     break;
                 case 'this_month':
-                    $query->whereBetween('sale_date', [
+                    $query->whereBetween($col, [
                         $today->copy()->startOfMonth(),
                         $today->copy()->endOfMonth()
                     ]);
                     break;
                 case 'this_year':
-                    $query->whereBetween('sale_date', [
+                    $query->whereBetween($col, [
                         $today->copy()->startOfYear(),
                         $today->copy()->endOfYear()
                     ]);
                     break;
                 case 'last_week':
-                    $query->whereBetween('sale_date', [
+                    $query->whereBetween($col, [
                         $today->copy()->subWeek()->startOfWeek(),
                         $today->copy()->subWeek()->endOfWeek()
                     ]);
                     break;
                 case 'last_month':
-                    $query->whereBetween('sale_date', [
+                    $query->whereBetween($col, [
                         $today->copy()->subMonth()->startOfMonth(),
                         $today->copy()->subMonth()->endOfMonth()
                     ]);
                     break;
                 case 'last_year':
-                    $query->whereBetween('sale_date', [
+                    $query->whereBetween($col, [
                         $today->copy()->subYear()->startOfYear(),
                         $today->copy()->subYear()->endOfYear()
                     ]);
@@ -154,10 +156,10 @@ class SaleController extends Controller
             }
         } else {
             if ($request->filled('start_date')) {
-                $query->whereDate('sale_date', '>=', $request->start_date);
+                $query->whereDate($col, '>=', $request->start_date);
             }
             if ($request->filled('end_date')) {
-                $query->whereDate('sale_date', '<=', $request->end_date);
+                $query->whereDate($col, '<=', $request->end_date);
             }
         }
         

@@ -17,7 +17,9 @@ class StockAdjustmentItem extends Model
     protected $fillable = [
         'stock_adjustment_id',
         'product_id',
-        'quantity_change',
+        'before_quantity',
+        'adjusted_quantity',
+        'after_quantity',
         'unit_cost_at_adjustment',
     ];
 

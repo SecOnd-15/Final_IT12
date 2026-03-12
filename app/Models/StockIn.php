@@ -7,10 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class StockIn extends Model
 {
     protected $fillable = [
+        'supplier_id',
         'stock_in_date',
         'reference_no',
         'received_by_user_id',
-        'status'
+        'subtotal',
+        'tax_amount',
+        'discount_amount',
+        'total_cost',
     ];
 
     protected $casts = [
@@ -25,6 +29,11 @@ class StockIn extends Model
             'l_name' => 'User',
             'full_name' => 'Unknown User'
         ]);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function items()
@@ -44,9 +53,9 @@ class StockIn extends Model
 
     public function getTotalCostAttribute()
     {
-        return $this->items->sum(function($item) {
-            return $item->quantity_received * $item->actual_unit_cost;
-        });
+        return $this->items->reduce(function ($carry, $item) {
+            return $carry + ($item->quantity_received * $item->actual_unit_cost);
+        }, 0);
     }
 
     

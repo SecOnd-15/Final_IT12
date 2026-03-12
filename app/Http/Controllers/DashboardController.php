@@ -447,7 +447,9 @@ class DashboardController extends Controller
                 'stock_adjustments.adjustment_date',
                 'stock_adjustments.adjustment_type',
                 'stock_adjustments.reason_notes',
-                'stock_adjustment_items.quantity_change',
+                'stock_adjustment_items.before_quantity',
+                'stock_adjustment_items.adjusted_quantity',
+                'stock_adjustment_items.after_quantity',
                 'products.name as product_name'
             )
             ->orderBy('stock_adjustments.adjustment_date', 'desc')

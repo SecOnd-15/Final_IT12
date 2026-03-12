@@ -115,8 +115,8 @@ $productPerformance = DB::table('sale_items')
     'products.name',
     DB::raw('SUM(sale_items.quantity_sold) as total_quantity'),
     DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) as gross_revenue'),
-    DB::raw('COALESCE((SELECT SUM(ri.total_line_refund) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as returns_amount'),
-    DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) - COALESCE((SELECT SUM(ri.total_line_refund) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as total_revenue'),
+    DB::raw('COALESCE((SELECT SUM(ri.total_line_refunded) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as returns_amount'),
+    DB::raw('SUM(sale_items.unit_price * sale_items.quantity_sold) - COALESCE((SELECT SUM(ri.total_line_refunded) FROM return_items ri JOIN product_returns pr ON ri.product_return_id = pr.id WHERE ri.product_id = products.id AND pr.created_at BETWEEN ? AND ?), 0) as total_revenue'),
     DB::raw('AVG(sale_items.unit_price) as avg_price')
 )
 ->addBinding([$startDate, $endDate, $startDate, $endDate], 'select')
@@ -331,7 +331,7 @@ $productPerformance = DB::table('sale_items')
             ->select(
                 'products.name',
                 DB::raw('SUM(return_items.quantity_returned) as total_quantity'),
-                DB::raw('SUM(return_items.total_line_refund) as total_refund')
+                DB::raw('SUM(return_items.total_line_refunded) as total_refund')
             )
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('total_refund')

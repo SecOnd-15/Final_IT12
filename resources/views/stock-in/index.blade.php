@@ -207,6 +207,10 @@
                                     <small class="text-muted">Received By:</small>
                                     <span class="fw-semibold" id="viewReceivedBy"></span>
                                 </div>
+                                <div class="list-group-item d-flex justify-content-between px-0">
+                                    <small class="text-muted">Supplier:</small>
+                                    <span class="fw-semibold" id="viewSupplier"></span>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -235,7 +239,6 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Product</th>
-                                        <th>Supplier</th>
                                         <th class="text-end">Quantity</th>
                                         <th class="text-end">Unit Cost</th>
                                         <th class="text-end">Total Cost</th>
@@ -317,6 +320,7 @@
                         });
                         document.getElementById('viewReferenceNo').textContent = stockIn.reference_no || 'N/A';
                         document.getElementById('viewReceivedBy').textContent = stockIn.received_by.full_name;
+                        document.getElementById('viewSupplier').textContent = stockIn.supplier ? stockIn.supplier.supplier_name : 'N/A';
                         document.getElementById('viewTotalItems').textContent = stockIn.items.length;
                         
                         // Calculate totals
@@ -335,7 +339,6 @@
                             const totalCost = item.quantity_received * item.actual_unit_cost;
                             row.innerHTML = `
                                 <td style="word-break: break-word; white-space: normal; max-width: 200px;">${item.product.name}</td>
-                                <td style="word-break: break-word; white-space: normal; max-width: 200px;">${item.supplier ? item.supplier.supplier_name : 'N/A'}</td> 
                                 <td class="text-end">${item.quantity_received}</td>
                                 <td class="text-end">₱${parseFloat(item.actual_unit_cost).toFixed(2)}</td>
                                 <td class="text-end">₱${parseFloat(totalCost).toFixed(2)}</td>

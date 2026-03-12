@@ -247,7 +247,7 @@
                             <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Qty Change <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control quantity-change" name="items[${itemCount}][quantity_change]" required 
+                                    <input type="number" class="form-control quantity-change" name="items[${itemCount}][adjusted_quantity]" required 
                                         placeholder="e.g., -5 or +3" step="1">
                                     <small class="form-text text-muted">Use - for removal, + for addition</small>
                                 </div>
@@ -558,7 +558,7 @@
                     }
 
                     formData.append(`items[${index}][product_id]`, productId);
-                    formData.append(`items[${index}][quantity_change]`, quantityChange);
+                    formData.append(`items[${index}][adjusted_quantity]`, quantityChange);
                     formData.append(`items[${index}][unit_cost_at_adjustment]`, unitCostAtAdjustment);
                 });
         

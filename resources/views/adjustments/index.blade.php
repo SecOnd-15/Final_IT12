@@ -182,6 +182,7 @@
                         <th class="text-end">Items</th>
                         <th class="text-end">Quantity Change</th>
                         <th class="text-end">Financial Impact</th>
+                        <th>Status</th>
                         <th>Processed By</th>
                         <th>Adjustment Date</th>
                         <th>Actions</th>
@@ -193,8 +194,8 @@
                         $totalQtyChange = 0;
                         $totalFinancialImpact = 0;
                         foreach($adjustment->items as $item) {
-                            $totalQtyChange += $item->quantity_change;
-                            $totalFinancialImpact += $item->quantity_change * $item->unit_cost_at_adjustment;
+                            $totalQtyChange += $item->adjusted_quantity;
+                            $totalFinancialImpact += $item->adjusted_quantity * $item->unit_cost_at_adjustment;
                         }
                     @endphp
                     <tr>
@@ -219,6 +220,16 @@
                         </td>
                         <td class="{{ $totalFinancialImpact < 0 ? 'no-negative' : ($totalFinancialImpact > 0 ? 'no-positive' : '') }} text-end">
                             ₱{{ number_format($totalFinancialImpact, 2) }}
+                        </td>
+                        <td>
+                            @php
+                                $statusClass = match($adjustment->approval_status ?? 'Pending') {
+                                    'Approved' => 'success',
+                                    'Rejected' => 'danger',
+                                    default => 'warning'
+                                };
+                            @endphp
+                            <span class="badge bg-{{ $statusClass }}">{{ $adjustment->approval_status ?? 'Pending' }}</span>
                         </td>
                         <td>{{ $adjustment->processedBy ? $adjustment->processedBy->full_name : 'Unknown User' }}</td>
                         <td>{{ $adjustment->adjustment_date->format('M d, Y h:i A') }}</td>
@@ -292,6 +303,10 @@
                                 <div class="list-group-item d-flex justify-content-between px-0">
                                     <small class="text-muted">Financial Impact:</small>
                                     <span class="fw-semibold" id="viewFinancialImpact"></span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between px-0">
+                                    <small class="text-muted">Approval Status:</small>
+                                    <span class="fw-semibold" id="viewApprovalStatus"></span>
                                 </div>
                             </div>
                         </div>
@@ -411,8 +426,8 @@
                         let totalFinancialImpact = 0;
                         
                         adjustment.items.forEach(item => {
-                            totalQtyChange += parseInt(item.quantity_change);
-                            totalFinancialImpact += (item.quantity_change * item.unit_cost_at_adjustment);
+                            totalQtyChange += parseInt(item.adjusted_quantity);
+                            totalFinancialImpact += (item.adjusted_quantity * item.unit_cost_at_adjustment);
                         });
                         
                         document.getElementById('viewNetQtyChange').textContent = totalQtyChange > 0 ? `+${totalQtyChange}` : totalQtyChange;
@@ -420,6 +435,12 @@
                         
                         document.getElementById('viewFinancialImpact').textContent = '₱' + parseFloat(totalFinancialImpact).toFixed(2);
                         document.getElementById('viewFinancialImpact').className = totalFinancialImpact < 0 ? 'no-negative fw-semibold' : (totalFinancialImpact > 0 ? 'no-positive fw-semibold' : 'fw-semibold');
+                        
+                        // Approval status badge
+                        const statusEl = document.getElementById('viewApprovalStatus');
+                        const status = adjustment.approval_status || 'Pending';
+                        const statusColor = status === 'Approved' ? 'success' : (status === 'Rejected' ? 'danger' : 'warning');
+                        statusEl.innerHTML = `<span class="badge bg-${statusColor}">${status}</span>`;
                         
                         // Populate items table
                         const itemsTable = document.getElementById('viewItemsTable');
@@ -430,8 +451,8 @@
                         
                         adjustment.items.forEach(item => {
                             const row = document.createElement('tr');
-                            const itemTotalValue = item.quantity_change * item.unit_cost_at_adjustment;
-                            tableTotalQty += item.quantity_change;
+                            const itemTotalValue = item.adjusted_quantity * item.unit_cost_at_adjustment;
+                            tableTotalQty += item.adjusted_quantity;
                             tableTotalValue += itemTotalValue;
                             
                             row.innerHTML = `
@@ -441,8 +462,8 @@
                                     </div>
                                 </td>
                                 <td>${item.product.sku}</td>
-                                <td class="text-end ${item.quantity_change < 0 ? 'no-negative' : (item.quantity_change > 0 ? 'no-positive' : '')}">
-                                    ${item.quantity_change > 0 ? '+' : ''}${item.quantity_change}
+                                <td class="text-end ${item.adjusted_quantity < 0 ? 'no-negative' : (item.adjusted_quantity > 0 ? 'no-positive' : '')}">
+                                    ${item.adjusted_quantity > 0 ? '+' : ''}${item.adjusted_quantity}
                                 </td>
                                 <td style="text-align: right;">₱${parseFloat(item.unit_cost_at_adjustment).toFixed(2)}</td>
                                 <td style="text-align: right;" class="${itemTotalValue < 0 ? 'no-negative' : (itemTotalValue > 0 ? 'no-positive' : '')}">
