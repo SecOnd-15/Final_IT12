@@ -717,7 +717,6 @@
             document.getElementById('subtotalDisplay').textContent = `₱${subtotal.toFixed(2)}`;
             document.getElementById('vatDisplay').textContent = `₱${vat.toFixed(2)}`;
             document.getElementById('totalDisplay').textContent = `₱${this.total.toFixed(2)}`;
-            document.getElementById('digitalAmountInfo').textContent = `Amount: ₱${this.total.toFixed(2)}`;
             this.calculateChange();
             this.updateCompleteButton();
         }
