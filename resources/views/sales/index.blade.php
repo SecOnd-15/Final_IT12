@@ -174,7 +174,7 @@
                         <td>{{ $sale->sale_date->format('M d, Y h:i A') }}</td>
                         <td>{{ $sale->user->f_name ?? '' }} {{ $sale->user->l_name ?? 'N/A' }}</td>
                         <td class="text-end">{{ $sale->items->count() }} items</td>
-                        <td class="fw-bold text-success text-end">₱{{ number_format($sale->items->sum(function($item) { return $item->quantity_sold * $item->unit_price; }), 2) }}</td>
+                        <td class="fw-bold text-success text-end">₱{{ number_format($sale->total_amount, 2) }}</td>
                         <td>{{ $sale->payment->payment_method }}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-info btn-action view-sale" data-id="{{ $sale->id }}" title="View Details">
@@ -287,6 +287,14 @@
                                     </tbody>
                                     <tfoot class="table-light">
                                         <tr>
+                                            <td colspan="3" class="text-end">Tax (<span id="viewSaleTaxPercent">0</span>%):</td>
+                                            <td style="padding-right: 16px;" class="text-end" id="viewSaleTaxAmount">₱0.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end text-danger">Total Discount:</td>
+                                            <td style="padding-right: 16px;" class="text-end text-danger" id="viewSaleDiscount">₱0.00</td>
+                                        </tr>
+                                        <tr>
                                             <td colspan="3" class="text-end fw-bold">Grand Total:</td>
                                             <td style="padding-right: 16px;" class="text-end fw-bold text-success" id="viewSaleTotal"></td>
                                         </tr>
@@ -367,8 +375,8 @@
                         document.getElementById('viewSaleNumber').textContent = '#' + sale.id;
                         document.getElementById('viewSaleDate').textContent = new Date(sale.sale_date).toLocaleString();
                         document.getElementById('viewSaleCashier').textContent = sale.user ? (sale.user.f_name + ' ' + sale.user.l_name) : 'N/A';
-                        document.getElementById('viewSaleCustomer').textContent = sale.customer_name || 'N/A';
-                        document.getElementById('viewSaleContact').textContent = sale.customer_contact || 'N/A';
+                        document.getElementById('viewSaleCustomer').textContent = (sale.customer_name || 'N/A') + (sale.customer_type && sale.customer_type !== 'Regular' ? ` (${sale.customer_type})` : '');
+                        document.getElementById('viewSaleContact').textContent = (sale.customer_contact || 'N/A') + (sale.pwd_senior_id ? ` [ID: ${sale.pwd_senior_id}]` : '');
                         
                         // Update items table
                         const itemsContainer = document.getElementById('viewSaleItems');
@@ -392,8 +400,11 @@
                             itemsContainer.appendChild(row);
                         });
                         
-                        // Update total
-                        document.getElementById('viewSaleTotal').textContent = `₱${total.toFixed(2)}`;
+                        // Update totals
+                        document.getElementById('viewSaleTaxPercent').textContent = parseFloat(sale.tax_percentage || 0);
+                        document.getElementById('viewSaleTaxAmount').textContent = `₱${parseFloat(sale.tax_amount || 0).toFixed(2)}`;
+                        document.getElementById('viewSaleDiscount').textContent = `-₱${parseFloat(sale.discount_amount || 0).toFixed(2)}`;
+                        document.getElementById('viewSaleTotal').textContent = `₱${parseFloat(sale.total_amount).toFixed(2)}`;
                         
                         // Update payment information
                         const paymentContainer = document.getElementById('viewSalePayment');

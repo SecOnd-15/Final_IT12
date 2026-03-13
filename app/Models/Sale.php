@@ -25,8 +25,11 @@ class Sale extends Model
         'sale_date', 
         'customer_name',
         'customer_contact',
+        'customer_type',
+        'pwd_senior_id',
         'subtotal',
         'tax_amount',
+        'tax_percentage',
         'discount_amount',
         'total_amount',
     ];

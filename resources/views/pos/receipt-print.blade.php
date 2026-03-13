@@ -128,6 +128,12 @@
         @if($sale->customer_contact)
         <strong>Contact:</strong> {{ $sale->customer_contact }}<br>
         @endif
+        @if($sale->customer_type && $sale->customer_type !== 'Regular')
+        <strong>Type:</strong> {{ $sale->customer_type }}<br>
+        @endif
+        @if($sale->pwd_senior_id)
+        <strong>ID No.:</strong> {{ $sale->pwd_senior_id }}<br>
+        @endif
     </div>
 
     <div class="line"></div>
@@ -158,31 +164,37 @@
 
     <div class="line"></div>
 
-    @php
-        $total = $sale->items->sum(fn($item) => $item->quantity_sold * $item->unit_price);
-        $vatRate = 0.12;
-        $vatableSales = $total / (1 + $vatRate);
-        $vatAmount = $total - $vatableSales;
-    @endphp
-
     <table class="amount-table">
         <tr>
-            <td>AMOUNT DUE:</td>
-            <td class="text-right">₱{{ number_format($total, 2) }}</td>
+            <td>ITEMS TOTAL:</td>
+            <td class="text-right">₱{{ number_format($sale->items->sum(fn($i) => $i->quantity_sold * $i->unit_price), 2) }}</td>
+        </tr>
+        @if($sale->customer_type === 'Regular')
+        <tr>
+            <td>VAT ({{ number_format($sale->tax_percentage, 0) }}%):</td>
+            <td class="text-right">₱{{ number_format($sale->tax_amount, 2) }}</td>
+        </tr>
+        @else
+        <tr>
+            <td>VAT EXEMPT SALES:</td>
+            <td class="text-right">₱{{ number_format($sale->subtotal, 2) }}</td>
         </tr>
         <tr>
-            <td>VAT SALES:</td>
-            <td class="text-right">₱{{ number_format($vatableSales, 2) }}</td>
+            <td>VAT AMOUNT:</td>
+            <td class="text-right">₱0.00</td>
         </tr>
+        @endif
+        @if($sale->discount_amount > 0)
         <tr>
-            <td>VAT 12%:</td>
-            <td class="text-right">₱{{ number_format($vatAmount, 2) }}</td>
+            <td>DISCOUNT:</td>
+            <td class="text-right">-₱{{ number_format($sale->discount_amount, 2) }}</td>
         </tr>
+        @endif
     </table>
 
     <div class="total-section">
         <span class="label">GRAND TOTAL</span>
-        <span class="amount">₱{{ number_format($total, 2) }}</span>
+        <span class="amount">₱{{ number_format($sale->total_amount, 2) }}</span>
     </div>    
 
     <div class="line"></div>

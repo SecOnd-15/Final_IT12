@@ -160,9 +160,27 @@ class POSController extends Controller
                 $change = 0;
             }
 
-            // Calculate financial totals (VAT-inclusive pricing, 12% VAT)
-            $subtotal = round($total / 1.12, 2);
-            $taxAmount = round($total - $subtotal, 2);
+            // Calculate financial totals (VAT-inclusive pricing)
+            $customerType = $request->input('customer_type', 'Regular');
+            $pwdSeniorId = $request->input('pwd_senior_id');
+            $manualTaxPercent = $request->input('manual_tax_percentage', 12);
+            $manualDiscount = $request->input('manual_discount_amount', 0);
+
+            $subtotal = round($total / (1 + ($manualTaxPercent / 100)), 2);
+            $taxAmount = 0;
+            $discountAmount = $manualDiscount;
+
+            if ($customerType === 'Regular') {
+                $taxAmount = round($total - $subtotal, 2);
+                $total = round($total - $manualDiscount, 2);
+            } else {
+                // Senior/PWD: VAT Exempt (Fixed 12% statutory VAT exclusion) + 20% Discount
+                $subtotal = round($total / 1.12, 2);
+                $seniorDiscount = round($subtotal * 0.20, 2);
+                $discountAmount = $seniorDiscount + $manualDiscount;
+                $total = round($subtotal - $seniorDiscount - $manualDiscount, 2);
+                $taxAmount = 0; // VAT Exempt
+            }
 
             // Create Sale
             $sale = Sale::create([
@@ -170,10 +188,13 @@ class POSController extends Controller
                 'sale_date' => now(),
                 'customer_name' => $customerName,
                 'customer_contact' => $customerContact,
+                'customer_type' => $customerType,
+                'pwd_senior_id' => $pwdSeniorId,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
-                'discount_amount' => 0,
-                'total_amount' => $total,
+                'tax_percentage' => $customerType === 'Regular' ? $manualTaxPercent : 0,
+                'discount_amount' => max(0, $discountAmount),
+                'total_amount' => max(0, $total),
             ]);
 
             // Create SaleItems & update stock

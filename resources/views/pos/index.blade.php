@@ -350,7 +350,20 @@
                 <i class="bi bi-person me-2"></i> Customer Details
             </label>
             <input type="text" id="customerName" class="form-control mb-2" placeholder="Customer Name (Optional)">
-            <input type="tel" id="customerContact" class="form-control" placeholder="Contact No. (Optional)">
+            <input type="tel" id="customerContact" class="form-control mb-2" placeholder="Contact No. (Optional)">
+            
+            <div class="row g-2">
+                <div class="col-6">
+                    <select id="customerType" class="form-select">
+                        <option value="Regular">Regular</option>
+                        <option value="Senior Citizen">Senior Citizen</option>
+                        <option value="PWD">PWD</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <input type="text" id="pwdSeniorId" class="form-control" placeholder="ID Number" style="display: none;">
+                </div>
+            </div>
         </div>
     
         <!-- Totals -->
@@ -360,13 +373,28 @@
                 <span id="subtotalDisplay">₱0.00</span>
             </div>
             <div class="summary-row">
-                <span>VAT (12%)</span>
+                <span>Tax (12%)</span>
+                <input type="hidden" id="taxPercentage" value="12">
                 <span id="vatDisplay">₱0.00</span>
             </div>
-            <div class="pt-3 mt-2 border-top">
+            <div class="summary-row align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <span>Discount</span>
+                    <div class="input-group input-group-sm" style="width: 120px;">
+                        <span class="input-group-text">₱</span>
+                        <input type="number" id="manualDiscount" class="form-control" value="0" min="0" step="0.01">
+                    </div>
+                </div>
+                <span id="manualDiscountDisplay">-₱0.00</span>
+            </div>
+            <div class="summary-row text-danger" id="discountRow" style="display: none;">
+                <span>Senior/PWD Discount (20%)</span>
+                <span id="discountDisplay">-₱0.00</span>
+            </div>
+            <div class="pt-3 mt-2 border-top" style="background: #f3f4f6; margin: -16px; padding: 16px; border-radius: 0 0 12px 12px;">
                 <div class="d-flex justify-content-between align-items-end">
-                    <span class="total-label mb-1">Total Amount</span>
-                    <span class="total-display" id="totalDisplay">₱0.00</span>
+                    <span class="total-label mb-1">Total Cost</span>
+                    <span class="total-display" id="totalDisplay" style="color: #3b82f6;">₱0.00</span>
                 </div>
             </div>
         </div>
@@ -469,6 +497,7 @@
         constructor() {
             this.items = JSON.parse(localStorage.getItem('posItems')) || [];
             this.total = 0;
+            this.customerType = 'Regular';
             this.init();
             this.renderItems();
             this.updateTotal();
@@ -710,12 +739,41 @@
         }
 
         updateTotal() {
-            this.total = this.items.reduce((sum, item) => sum + item.unit_price * item.quantity_sold, 0);
-            const subtotal = this.total / 1.12; 
-            const vat = this.total - subtotal;  
+            const rawTotal = this.items.reduce((sum, item) => sum + item.unit_price * item.quantity_sold, 0);
+            this.customerType = document.getElementById('customerType').value;
+            const manualTaxPercent = parseFloat(document.getElementById('taxPercentage').value) || 0;
+            const manualDiscountVal = parseFloat(document.getElementById('manualDiscount').value) || 0;
+            
+            let subtotal, vat, seniorDiscount = 0, finalTotal;
 
+            if (this.customerType === 'Regular') {
+                // For Regular, we use the manual tax percentage on the gross amount
+                // assuming retail prices are already VAT-inclusive if tax is 12%
+                // But let's follow a standard formula: Item Price / (1 + TaxRate) = Subtotal
+                subtotal = rawTotal / (1 + (manualTaxPercent / 100));
+                vat = rawTotal - subtotal;
+                finalTotal = rawTotal - manualDiscountVal;
+                
+                document.getElementById('discountRow').style.display = 'none';
+                document.getElementById('pwdSeniorId').style.display = 'none';
+            } else {
+                // Senior/PWD: VAT Exempt (Tax 0%) + 20% Discount
+                // We ignore manual tax if Senior/PWD is selected as they are VAT exempt by law
+                document.getElementById('taxPercentage').value = 0;
+                subtotal = rawTotal / 1.12; // Statutory VAT-exempt price
+                vat = 0;
+                seniorDiscount = subtotal * 0.20;
+                finalTotal = (subtotal - seniorDiscount) - manualDiscountVal;
+                
+                document.getElementById('discountRow').style.display = 'flex';
+                document.getElementById('pwdSeniorId').style.display = 'block';
+            }
+
+            this.total = Math.max(0, finalTotal);
             document.getElementById('subtotalDisplay').textContent = `₱${subtotal.toFixed(2)}`;
             document.getElementById('vatDisplay').textContent = `₱${vat.toFixed(2)}`;
+            document.getElementById('manualDiscountDisplay').textContent = `-₱${manualDiscountVal.toFixed(2)}`;
+            document.getElementById('discountDisplay').textContent = `-₱${seniorDiscount.toFixed(2)}`;
             document.getElementById('totalDisplay').textContent = `₱${this.total.toFixed(2)}`;
             this.calculateChange();
             this.updateCompleteButton();
@@ -785,6 +843,13 @@
 
             // Cancel sale button
             document.getElementById('cancelSale').addEventListener('click', () => this.cancelSale());
+
+            // Customer type change
+            document.getElementById('customerType').addEventListener('change', () => this.updateTotal());
+
+            // Manual fields
+            document.getElementById('taxPercentage').addEventListener('input', () => this.updateTotal());
+            document.getElementById('manualDiscount').addEventListener('input', () => this.updateTotal());
         }
 
         handlePaymentMethodChange(method) {
@@ -830,8 +895,14 @@
             const method = document.querySelector('input[name="paymentMethod"]:checked').value;
             const tendered = parseFloat(document.getElementById('amountTendered').value) || 0;
             const refNo = document.getElementById('referenceNo').value;
+            const customerType = document.getElementById('customerType').value;
+            const idNo = document.getElementById('pwdSeniorId').value;
 
             let valid = this.items.length > 0;
+
+            if (customerType !== 'Regular') {
+                valid = valid && idNo.trim() !== '';
+            }
 
             if (method === 'Cash') {
                 valid = valid && tendered >= this.total;
@@ -869,7 +940,11 @@
                         amount_tendered: tendered,
                         reference_no: refNo,
                         customer_name: customerName,
-                        customer_contact: customerContact
+                        customer_contact: customerContact,
+                        customer_type: document.getElementById('customerType').value,
+                        pwd_senior_id: document.getElementById('pwdSeniorId').value,
+                        manual_tax_percentage: parseFloat(document.getElementById('taxPercentage').value) || 0,
+                        manual_discount_amount: parseFloat(document.getElementById('manualDiscount').value) || 0
                     })
                 });
 
@@ -913,9 +988,13 @@
             this.handlePaymentMethodChange('Cash');
             document.getElementById('customerName').value = '';
             document.getElementById('customerContact').value = '';
+            document.getElementById('customerType').value = 'Regular';
+            document.getElementById('pwdSeniorId').value = '';
+            document.getElementById('pwdSeniorId').style.display = 'none';
             document.getElementById('amountTendered').value = '';
             document.getElementById('referenceNo').value = '';
             document.getElementById('changeDisplay').style.display = 'none';
+            document.getElementById('discountRow').style.display = 'none';
             this.renderItems();
             this.updateTotal();
         }

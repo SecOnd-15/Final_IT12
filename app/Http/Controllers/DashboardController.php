@@ -145,17 +145,17 @@ class DashboardController extends Controller
     private function calculateNetRevenue($startDate, $endDate)
     {
         // Gross Sales
-        $grossSales = DB::table('sale_items')
-            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-            ->whereBetween('sales.sale_date', [$startDate, $endDate])
-            ->sum(DB::raw('sale_items.unit_price * sale_items.quantity_sold'));
+        // Gross Sales (using total_amount which includes discounts)
+        $grossSales = DB::table('sales')
+            ->whereBetween('sale_date', [$startDate, $endDate])
+            ->sum('total_amount');
 
         // Returns Amount
         $returnsAmount = DB::table('product_returns')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->sum('total_refund_amount');
 
-        return $grossSales - $returnsAmount;
+        return max(0, $grossSales - $returnsAmount);
     }
 
     private function calculateGrossProfit($startDate, $endDate)
@@ -180,7 +180,7 @@ class DashboardController extends Controller
 
         $netCogs = $grossCogs - $returnedCogs;
 
-        return $netRevenue - $netCogs;
+        return max(0, $netRevenue - $netCogs);
     }
 
     private function getSalesTrend($startDate, $endDate, $filterType)
@@ -219,17 +219,16 @@ class DashboardController extends Controller
             $labels[] = $hourStart->format('g A');
             
             // Get sales for this hour
-            $hourlySales = DB::table('sale_items')
-                ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-                ->whereBetween('sales.sale_date', [$hourStart, $hourEnd])
-                ->sum(DB::raw('sale_items.unit_price * sale_items.quantity_sold'));
+            $hourlySales = DB::table('sales')
+                ->whereBetween('sale_date', [$hourStart, $hourEnd])
+                ->sum('total_amount');
             
             // Get returns for this hour
             $hourlyReturns = DB::table('product_returns')
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->sum('total_refund_amount');
             
-            $data[] = $hourlySales - $hourlyReturns;
+            $data[] = max(0, $hourlySales - $hourlyReturns);
         }
         
         return [
@@ -248,16 +247,15 @@ class DashboardController extends Controller
             $dates[] = $currentDate->format('M d');
             
             // Net sales for the day (sales minus returns)
-            $dailySales = DB::table('sale_items')
-                ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-                ->whereDate('sales.sale_date', $currentDate->format('Y-m-d'))
-                ->sum(DB::raw('sale_items.unit_price * sale_items.quantity_sold'));
+            $dailySales = DB::table('sales')
+                ->whereDate('sale_date', $currentDate)
+                ->sum('total_amount');
             
             $dailyReturns = DB::table('product_returns')
-                ->whereDate('created_at', $currentDate->format('Y-m-d'))
+                ->whereDate('created_at', $currentDate)
                 ->sum('total_refund_amount');
             
-            $data[] = $dailySales - $dailyReturns;
+            $data[] = max(0, $dailySales - $dailyReturns);
             $currentDate->addDay();
         }
 
@@ -279,16 +277,15 @@ class DashboardController extends Controller
             
             $labels[] = $weekStart->format('M d') . ' - ' . $weekEnd->format('M d');
             
-            $weeklySales = DB::table('sale_items')
-                ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-                ->whereBetween('sales.sale_date', [$weekStart, $weekEnd])
-                ->sum(DB::raw('sale_items.unit_price * sale_items.quantity_sold'));
+            $weeklySales = DB::table('sales')
+                ->whereBetween('sale_date', [$weekStart->startOfDay(), $weekEnd->endOfDay()])
+                ->sum('total_amount');
             
             $weeklyReturns = DB::table('product_returns')
-                ->whereBetween('created_at', [$weekStart, $weekEnd])
+                ->whereBetween('created_at', [$weekStart->startOfDay(), $weekEnd->endOfDay()])
                 ->sum('total_refund_amount');
             
-            $data[] = $weeklySales - $weeklyReturns;
+            $data[] = max(0, $weeklySales - $weeklyReturns);
             $currentWeek->addWeek();
         }
 
@@ -310,16 +307,16 @@ class DashboardController extends Controller
             
             $labels[] = $monthStart->format('M Y');
             
-            $monthlySales = DB::table('sale_items')
-                ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-                ->whereBetween('sales.sale_date', [$monthStart, $monthEnd])
-                ->sum(DB::raw('sale_items.unit_price * sale_items.quantity_sold'));
+            $monthlySales = DB::table('sales')
+                ->whereYear('sale_date', $currentMonth->year)
+                ->whereMonth('sale_date', $currentMonth->month)
+                ->sum('total_amount');
             
             $monthlyReturns = DB::table('product_returns')
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
                 ->sum('total_refund_amount');
             
-            $data[] = $monthlySales - $monthlyReturns;
+            $data[] = max(0, $monthlySales - $monthlyReturns);
             $currentMonth->addMonth();
         }
 
@@ -545,16 +542,15 @@ class DashboardController extends Controller
             
             $labels[] = $yearStart->format('Y');
             
-            $yearlySales = DB::table('sale_items')
-                ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-                ->whereBetween('sales.sale_date', [$yearStart, $yearEnd])
-                ->sum(DB::raw('sale_items.unit_price * sale_items.quantity_sold'));
+            $yearlySales = DB::table('sales')
+                ->whereYear('sale_date', $currentYear->year)
+                ->sum('total_amount');
             
             $yearlyReturns = DB::table('product_returns')
                 ->whereBetween('created_at', [$yearStart, $yearEnd])
                 ->sum('total_refund_amount');
             
-            $data[] = $yearlySales - $yearlyReturns;
+            $data[] = max(0, $yearlySales - $yearlyReturns);
             $currentYear->addYear();
         }
     

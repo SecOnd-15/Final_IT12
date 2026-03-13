@@ -57,10 +57,10 @@
             <div class="card h-100 border-0 shadow-sm metric-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="metric-icon-bg bg-white bg-opacity-20 rounded-3 p-2">
+                        <div class="metric-icon-bg rounded-3 p-2" style="background: rgba(255, 255, 255, 0.2) !important;">
                             <i class="bi bi-cash-stack text-white fs-4"></i>
                         </div>
-                        <span class="badge bg-white bg-opacity-20 text-white fw-medium">Revenue</span>
+                        <span class="badge text-white fw-medium" style="background: rgba(255, 255, 255, 0.2) !important;">Revenue</span>
                     </div>
                     <div class="mt-auto">
                         <h3 class="text-white fw-bold mb-0">₱{{ number_format($totalRevenue, 0) }}</h3>
@@ -76,10 +76,10 @@
             <div class="card h-100 border-0 shadow-sm metric-card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="metric-icon-bg bg-white bg-opacity-20 rounded-3 p-2">
+                        <div class="metric-icon-bg rounded-3 p-2" style="background: rgba(255, 255, 255, 0.2) !important;">
                             <i class="bi bi-graph-up text-white fs-4"></i>
                         </div>
-                        <span class="badge bg-white bg-opacity-20 text-white fw-medium">Profit</span>
+                        <span class="badge text-white fw-medium" style="background: rgba(255, 255, 255, 0.2) !important;">Profit</span>
                     </div>
                     <div class="mt-auto">
                         <h3 class="text-white fw-bold mb-0">₱{{ number_format($grossProfit, 0) }}</h3>
@@ -95,10 +95,10 @@
             <div class="card h-100 border-0 shadow-sm metric-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="metric-icon-bg bg-white bg-opacity-20 rounded-3 p-2">
+                        <div class="metric-icon-bg rounded-3 p-2" style="background: rgba(255, 255, 255, 0.2) !important;">
                             <i class="bi bi-receipt text-white fs-4"></i>
                         </div>
-                        <span class="badge bg-white bg-opacity-20 text-white fw-medium">Orders</span>
+                        <span class="badge text-white fw-medium" style="background: rgba(255, 255, 255, 0.2) !important;">Orders</span>
                     </div>
                     <div class="mt-auto">
                         <h3 class="text-white fw-bold mb-0">{{ number_format($totalTransactions, 0) }}</h3>
@@ -114,10 +114,10 @@
             <div class="card h-100 border-0 shadow-sm metric-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="metric-icon-bg bg-white bg-opacity-20 rounded-3 p-2">
+                        <div class="metric-icon-bg rounded-3 p-2" style="background: rgba(255, 255, 255, 0.2) !important;">
                             <i class="bi bi-cart-check text-white fs-4"></i>
                         </div>
-                        <span class="badge bg-white bg-opacity-20 text-white fw-medium">Average</span>
+                        <span class="badge text-white fw-medium" style="background: rgba(255, 255, 255, 0.2) !important;">Average</span>
                     </div>
                     <div class="mt-auto">
                         <h3 class="text-white fw-bold mb-0">₱{{ number_format($averageOrderValue, 0) }}</h3>
