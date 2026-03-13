@@ -149,7 +149,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Return ID</th>
-                        <th>Sale ID</th>
+                        <th>Sales Item ID</th>
                         <th>Return Reason</th>
                         <th class="text-end">
                             Total Refund
@@ -355,13 +355,13 @@
                         // Populate basic info
                         document.getElementById('viewReturnId').textContent = returnData.id;
                         document.getElementById('viewSaleId').textContent = returnData.sale_id;
-                        document.getElementById('viewCustomerName').textContent = returnData.sale.customer_name || 'N/A';
-                        document.getElementById('viewCustomerContact').textContent = returnData.sale.customer_contact || 'N/A';
+                        document.getElementById('viewCustomerName').textContent = returnData.sale ? (returnData.sale.customer_name || 'N/A') : 'N/A';
+                        document.getElementById('viewCustomerContact').textContent = returnData.sale ? (returnData.sale.customer_contact || 'N/A') : 'N/A';
                         document.getElementById('viewTotalRefund').textContent = '-₱' + parseFloat(returnData.total_refund_amount).toFixed(2);
-                        document.getElementById('viewRefundMethod').textContent = returnData.refund_payment.payment_method;
+                        document.getElementById('viewRefundMethod').textContent = returnData.refund_payment ? returnData.refund_payment.payment_method : 'N/A';
                         document.getElementById('viewReturnReason').textContent = returnData.return_reason;
-                        document.getElementById('viewReferenceNo').textContent = returnData.refund_payment.reference_no || 'Not applicable (Cash refund)';
-                        document.getElementById('viewProcessedBy').textContent = returnData.user.f_name + ' ' + returnData.user.l_name;
+                        document.getElementById('viewReferenceNo').textContent = returnData.refund_payment ? (returnData.refund_payment.reference_no || 'Not applicable (Cash refund)') : 'N/A';
+                        document.getElementById('viewProcessedBy').textContent = returnData.user ? (returnData.user.f_name + ' ' + returnData.user.l_name) : 'N/A';
                         document.getElementById('viewReturnDate').textContent = new Date(returnData.created_at).toLocaleDateString('en-US', {
                             month: 'short', day: '2-digit', year: 'numeric'
                         }) + ' ' + new Date(returnData.created_at).toLocaleTimeString('en-US', {
@@ -377,9 +377,9 @@
                             const row = itemsTable.insertRow();
                             row.innerHTML = `
                                 <td style="word-break: break-word; max-width: 200px; overflow-wrap: break-word;">
-                                    ${item.product.name}
+                                    ${item.product ? item.product.name : 'N/A'}
                                 </td>
-                                <td>${item.product.sku}</td>
+                                <td>${item.product ? (item.product.sku || '') : ''}</td>
                                 <td>${item.quantity_returned}</td>
                                 <td class="text-end">₱${parseFloat(item.refunded_price_per_unit).toFixed(2)}</td>
                                 <td class="text-end">₱${parseFloat(item.total_line_refunded).toFixed(2)}</td>

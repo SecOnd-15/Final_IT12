@@ -129,8 +129,8 @@ class POSController extends Controller
                 throw new Exception('Cart is empty.');
             }
 
-            // Calculate total
-            $total = 0;
+            // Calculate raw total from product prices
+            $rawTotal = 0;
             foreach ($items as $item) {
                 $product = Product::findOrFail($item['product']['id']);
                 $qty = $item['quantity_sold'];
@@ -140,24 +140,7 @@ class POSController extends Controller
                     throw new Exception("Insufficient stock for {$product->name}");
                 }
 
-                $total += $qty * $price;
-            }
-
-            // Validate payment
-            if ($paymentMethod === 'Cash') {
-                if ($amountTendered < $total) {
-                    throw new Exception('Amount tendered must be greater than or equal to total.');
-                }
-                $change = $amountTendered - $total;
-            } else {
-                // GCash or Card
-                if ($amountTendered != $total) {
-                    throw new Exception('Amount tendered must equal total for ' . $paymentMethod);
-                }
-                if (empty($referenceNo)) {
-                    throw new Exception('Reference number is required for ' . $paymentMethod);
-                }
-                $change = 0;
+                $rawTotal += $qty * $price;
             }
 
             // Calculate financial totals (VAT-inclusive pricing)
@@ -165,21 +148,43 @@ class POSController extends Controller
             $pwdSeniorId = $request->input('pwd_senior_id');
             $manualTaxPercent = $request->input('manual_tax_percentage', 12);
             $manualDiscount = $request->input('manual_discount_amount', 0);
+            $applySpecialDiscount = $request->input('apply_special_discount', false);
 
-            $subtotal = round($total / (1 + ($manualTaxPercent / 100)), 2);
+            $subtotal = round($rawTotal / (1 + ($manualTaxPercent / 100)), 2);
             $taxAmount = 0;
             $discountAmount = $manualDiscount;
+            $total = $rawTotal;
 
-            if ($customerType === 'Regular') {
-                $taxAmount = round($total - $subtotal, 2);
-                $total = round($total - $manualDiscount, 2);
+            if ($customerType === 'Regular' || !$applySpecialDiscount) {
+                // Regular customer OR Senior/PWD without special discount applied
+                $taxAmount = round($rawTotal - $subtotal, 2);
+                $total = round($rawTotal - $manualDiscount, 2);
             } else {
-                // Senior/PWD: VAT Exempt (Fixed 12% statutory VAT exclusion) + 20% Discount
-                $subtotal = round($total / 1.12, 2);
+                // Senior/PWD with discount applied: VAT Exempt + 20% Discount
+                $subtotal = round($rawTotal / 1.12, 2);
                 $seniorDiscount = round($subtotal * 0.20, 2);
                 $discountAmount = $seniorDiscount + $manualDiscount;
                 $total = round($subtotal - $seniorDiscount - $manualDiscount, 2);
                 $taxAmount = 0; // VAT Exempt
+            }
+
+            $total = max(0, $total);
+
+            // Validate payment AFTER discount calculation
+            if ($paymentMethod === 'Cash') {
+                if ($amountTendered < $total) {
+                    throw new Exception('Amount tendered must be greater than or equal to total.');
+                }
+                $change = round($amountTendered - $total, 2);
+            } else {
+                // GCash or Card
+                if (round($amountTendered, 2) != round($total, 2)) {
+                    throw new Exception('Amount tendered must equal total for ' . $paymentMethod);
+                }
+                if (empty($referenceNo)) {
+                    throw new Exception('Reference number is required for ' . $paymentMethod);
+                }
+                $change = 0;
             }
 
             // Create Sale
@@ -192,9 +197,9 @@ class POSController extends Controller
                 'pwd_senior_id' => $pwdSeniorId,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
-                'tax_percentage' => $customerType === 'Regular' ? $manualTaxPercent : 0,
+                'tax_percentage' => ($customerType !== 'Regular' && $applySpecialDiscount) ? 0 : $manualTaxPercent,
                 'discount_amount' => max(0, $discountAmount),
-                'total_amount' => max(0, $total),
+                'total_amount' => $total,
             ]);
 
             // Create SaleItems & update stock

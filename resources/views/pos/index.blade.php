@@ -350,7 +350,10 @@
                 <i class="bi bi-person me-2"></i> Customer Details
             </label>
             <input type="text" id="customerName" class="form-control mb-2" placeholder="Customer Name (Optional)">
-            <input type="tel" id="customerContact" class="form-control mb-2" placeholder="Contact No. (Optional)">
+            <div class="input-group mb-2">
+                <span class="input-group-text">+63</span>
+                <input type="tel" id="customerContact" class="form-control" placeholder="9XXXXXXXXX (Optional)" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)">
+            </div>
             
             <div class="row g-2">
                 <div class="col-6">
@@ -363,6 +366,12 @@
                 <div class="col-6">
                     <input type="text" id="pwdSeniorId" class="form-control" placeholder="ID Number" style="display: none;">
                 </div>
+            </div>
+            <div class="form-check mt-2" id="applyDiscountRow" style="display: none;">
+                <input class="form-check-input" type="checkbox" id="applySpecialDiscount" checked>
+                <label class="form-check-label small" for="applySpecialDiscount">
+                    Apply Senior/PWD Discount (20% + VAT Exempt)
+                </label>
             </div>
         </div>
     
@@ -741,32 +750,44 @@
         updateTotal() {
             const rawTotal = this.items.reduce((sum, item) => sum + item.unit_price * item.quantity_sold, 0);
             this.customerType = document.getElementById('customerType').value;
-            const manualTaxPercent = parseFloat(document.getElementById('taxPercentage').value) || 0;
             const manualDiscountVal = parseFloat(document.getElementById('manualDiscount').value) || 0;
+            const applySpecialDiscount = document.getElementById('applySpecialDiscount').checked;
             
             let subtotal, vat, seniorDiscount = 0, finalTotal;
 
             if (this.customerType === 'Regular') {
-                // For Regular, we use the manual tax percentage on the gross amount
-                // assuming retail prices are already VAT-inclusive if tax is 12%
-                // But let's follow a standard formula: Item Price / (1 + TaxRate) = Subtotal
+                // Reset tax to 12% when switching back to Regular
+                document.getElementById('taxPercentage').value = 12;
+                const manualTaxPercent = parseFloat(document.getElementById('taxPercentage').value) || 0;
                 subtotal = rawTotal / (1 + (manualTaxPercent / 100));
                 vat = rawTotal - subtotal;
                 finalTotal = rawTotal - manualDiscountVal;
                 
                 document.getElementById('discountRow').style.display = 'none';
                 document.getElementById('pwdSeniorId').style.display = 'none';
+                document.getElementById('applyDiscountRow').style.display = 'none';
             } else {
-                // Senior/PWD: VAT Exempt (Tax 0%) + 20% Discount
-                // We ignore manual tax if Senior/PWD is selected as they are VAT exempt by law
-                document.getElementById('taxPercentage').value = 0;
-                subtotal = rawTotal / 1.12; // Statutory VAT-exempt price
-                vat = 0;
-                seniorDiscount = subtotal * 0.20;
-                finalTotal = (subtotal - seniorDiscount) - manualDiscountVal;
-                
-                document.getElementById('discountRow').style.display = 'flex';
+                // Show the toggle and ID field
+                document.getElementById('applyDiscountRow').style.display = 'block';
                 document.getElementById('pwdSeniorId').style.display = 'block';
+
+                if (applySpecialDiscount) {
+                    // Senior/PWD: VAT Exempt (Tax 0%) + 20% Discount
+                    document.getElementById('taxPercentage').value = 0;
+                    subtotal = rawTotal / 1.12; // Statutory VAT-exempt price
+                    vat = 0;
+                    seniorDiscount = subtotal * 0.20;
+                    finalTotal = (subtotal - seniorDiscount) - manualDiscountVal;
+                    document.getElementById('discountRow').style.display = 'flex';
+                } else {
+                    // Senior/PWD selected but discount NOT applied — treat like Regular pricing
+                    document.getElementById('taxPercentage').value = 12;
+                    const manualTaxPercent = 12;
+                    subtotal = rawTotal / (1 + (manualTaxPercent / 100));
+                    vat = rawTotal - subtotal;
+                    finalTotal = rawTotal - manualDiscountVal;
+                    document.getElementById('discountRow').style.display = 'none';
+                }
             }
 
             this.total = Math.max(0, finalTotal);
@@ -847,6 +868,9 @@
             // Customer type change
             document.getElementById('customerType').addEventListener('change', () => this.updateTotal());
 
+            // Apply special discount toggle
+            document.getElementById('applySpecialDiscount').addEventListener('change', () => this.updateTotal());
+
             // Manual fields
             document.getElementById('taxPercentage').addEventListener('input', () => this.updateTotal());
             document.getElementById('manualDiscount').addEventListener('input', () => this.updateTotal());
@@ -872,15 +896,16 @@
         }
 
         calculateChange() {
-            const tendered = parseFloat(document.getElementById('amountTendered').value) || 0;
-            const change = tendered - this.total;
+            const tendered = parseFloat(parseFloat(document.getElementById('amountTendered').value || 0).toFixed(2));
+            const total = parseFloat(this.total.toFixed(2));
+            const change = parseFloat((tendered - total).toFixed(2));
             const display = document.getElementById('changeDisplay');
             
-            if (tendered >= this.total && change > 0) {
+            if (tendered >= total && change > 0) {
                 display.textContent = `Change: ₱${change.toFixed(2)}`;
                 display.style.display = 'block';
                 display.style.color = '#28a745';
-            } else if (tendered < this.total && tendered > 0) {
+            } else if (tendered < total && tendered > 0) {
                 display.textContent = `Amount Insufficient (Short: ₱${Math.abs(change).toFixed(2)})`;
                 display.style.display = 'block';
                 display.style.color = '#dc3545'; 
@@ -893,19 +918,21 @@
             const btn = document.getElementById('completeSale');
             const cancelBtn = document.getElementById('cancelSale');
             const method = document.querySelector('input[name="paymentMethod"]:checked').value;
-            const tendered = parseFloat(document.getElementById('amountTendered').value) || 0;
+            const tendered = parseFloat(parseFloat(document.getElementById('amountTendered').value || 0).toFixed(2));
             const refNo = document.getElementById('referenceNo').value;
             const customerType = document.getElementById('customerType').value;
             const idNo = document.getElementById('pwdSeniorId').value;
+            const applySpecialDiscount = document.getElementById('applySpecialDiscount').checked;
+            const total = parseFloat(this.total.toFixed(2));
 
             let valid = this.items.length > 0;
 
-            if (customerType !== 'Regular') {
+            if (customerType !== 'Regular' && applySpecialDiscount) {
                 valid = valid && idNo.trim() !== '';
             }
 
             if (method === 'Cash') {
-                valid = valid && tendered >= this.total;
+                valid = valid && tendered >= total;
             } else {
                 valid = valid && refNo.trim() !== '';
             }
@@ -925,7 +952,8 @@
             const tendered = parseFloat(document.getElementById('amountTendered').value) || this.total;
             const refNo = document.getElementById('referenceNo').value;
             const customerName = document.getElementById('customerName').value;
-            const customerContact = document.getElementById('customerContact').value;
+            const rawContact = document.getElementById('customerContact').value;
+            const customerContact = rawContact ? '+63' + rawContact : '';
 
             try {
                 const res = await fetch('/pos/complete-sale', {
@@ -944,7 +972,8 @@
                         customer_type: document.getElementById('customerType').value,
                         pwd_senior_id: document.getElementById('pwdSeniorId').value,
                         manual_tax_percentage: parseFloat(document.getElementById('taxPercentage').value) || 0,
-                        manual_discount_amount: parseFloat(document.getElementById('manualDiscount').value) || 0
+                        manual_discount_amount: parseFloat(document.getElementById('manualDiscount').value) || 0,
+                        apply_special_discount: document.getElementById('applySpecialDiscount').checked
                     })
                 });
 
@@ -991,6 +1020,8 @@
             document.getElementById('customerType').value = 'Regular';
             document.getElementById('pwdSeniorId').value = '';
             document.getElementById('pwdSeniorId').style.display = 'none';
+            document.getElementById('applySpecialDiscount').checked = true;
+            document.getElementById('applyDiscountRow').style.display = 'none';
             document.getElementById('amountTendered').value = '';
             document.getElementById('referenceNo').value = '';
             document.getElementById('changeDisplay').style.display = 'none';

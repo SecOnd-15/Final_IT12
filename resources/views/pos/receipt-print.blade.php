@@ -186,7 +186,15 @@
         @endif
         @if($sale->discount_amount > 0)
         <tr>
-            <td>DISCOUNT:</td>
+            <td>
+                @if($sale->customer_type === 'Senior Citizen')
+                    SC DISCOUNT (20%):
+                @elseif($sale->customer_type === 'PWD')
+                    PWD DISCOUNT (20%):
+                @else
+                    DISCOUNT:
+                @endif
+            </td>
             <td class="text-right">-₱{{ number_format($sale->discount_amount, 2) }}</td>
         </tr>
         @endif
