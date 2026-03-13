@@ -9,7 +9,7 @@
         size: 80mm auto;
         margin: 0;
     }
-    <!-- RECEIPT UPDATE TEST -->
+    
     body {
         width: 72mm; /* 80mm total width with 4mm margins each side */
         margin: 0 auto;
