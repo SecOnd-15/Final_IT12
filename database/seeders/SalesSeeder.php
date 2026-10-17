@@ -89,20 +89,20 @@ class SalesSeeder extends Seeder
                 }
                 
                 // Skip Sundays
-                if ($date->dayOfWeek === Carbon::SUNDAY) {
+                if ($date->isSunday()) {
                     continue;
                 }
 
-            // Determine number of sales for this day (more on Saturdays)
-            if ($date->dayOfWeek === Carbon::SATURDAY) {
-                $salesCount = rand(25, 40); // Busier on Saturdays
-            } else {
-                $salesCount = rand(15, 30); // Regular days
-            }
+                // Determine number of sales for this day (more on Saturdays)
+                if ($date->isSaturday()) {
+                    $salesCount = rand(25, 40); // Busier on Saturdays
+                } else {
+                    $salesCount = rand(15, 30); // Regular days
+                }
 
                 for ($saleNum = 1; $saleNum <= $salesCount; $saleNum++) {
                     // Determine sale time
-                    if (in_array($date->dayOfWeek, [Carbon::SATURDAY]) || rand(1, 100) <= 60) {
+                    if ($date->isSaturday() || rand(1, 100) <= 60) {
                         // Peak day or 60% chance of peak hour
                         $hour = $peakHours[array_rand($peakHours)];
                     } else {
@@ -116,17 +116,6 @@ class SalesSeeder extends Seeder
                 $hasCustomerInfo = rand(1, 100) <= 70; // 70% of sales have customer info
                 $customerName = $hasCustomerInfo ? $customerNames[array_rand($customerNames)] : null;
                 $customerContact = $hasCustomerInfo ? $customerContacts[array_rand($customerContacts)] : null;
-
-                // Create sale record
-                $salesData[] = [
-                    'id' => $saleId,
-                    'sale_date' => $saleDateTime,
-                    'user_id' => $userId,
-                    'customer_name' => $customerName,
-                    'customer_contact' => $customerContact,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
 
                 // Generate sale items (1-8 items per sale)
                 $itemsCount = rand(1, 8);
@@ -155,6 +144,25 @@ class SalesSeeder extends Seeder
 
                     $saleSubtotal += $itemTotal;
                 }
+
+                $netSubtotal = round($saleSubtotal / 1.12, 2);
+                $taxAmount = round($saleSubtotal - $netSubtotal, 2);
+
+                // Create sale record
+                $salesData[] = [
+                    'id' => $saleId,
+                    'sale_date' => $saleDateTime,
+                    'user_id' => $userId,
+                    'customer_name' => $customerName,
+                    'customer_contact' => $customerContact,
+                    'subtotal' => $netSubtotal,
+                    'tax_amount' => $taxAmount,
+                    'tax_percentage' => 12,
+                    'discount_amount' => 0,
+                    'total_amount' => round($saleSubtotal, 2),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
 
                 // Create payment record
                 $paymentMethod = $paymentMethods[array_rand($paymentMethods)];

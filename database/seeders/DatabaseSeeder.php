@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             SalesSeeder::class,
             SampleDataSeeder::class,
+            PresentationDataSeeder::class,
         ]);
     }
 }

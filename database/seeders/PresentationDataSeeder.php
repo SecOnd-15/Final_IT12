@@ -48,7 +48,7 @@ class PresentationDataSeeder extends Seeder
             $date = $now->copy()->subDays($daysAgo);
 
             // Skip Sundays
-            if ($date->dayOfWeek === Carbon::SUNDAY) continue;
+            if ($date->isSunday()) continue;
 
             // 8–15 sales per day
             $salesCount = rand(8, 15);

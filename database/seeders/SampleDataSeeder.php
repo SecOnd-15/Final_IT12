@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class SampleDataSeeder extends Seeder
 {
@@ -14,9 +15,9 @@ class SampleDataSeeder extends Seeder
         $now        = Carbon::now();
         $adminId    = DB::table('users')->where('username', 'admin')->value('id');
         $products   = DB::table('products')->get()->keyBy('id');
-        $supplierIds = DB::table('suppliers')->pluck('id')->toArray();
 
         $this->seedSuppliers($now);
+        $supplierIds = DB::table('suppliers')->pluck('id')->toArray();
         $this->seedUsers($now);
         $this->seedStockIns($now, $adminId, $supplierIds, $products);
         $this->seedProductPrices($now, $adminId, $products);
@@ -136,12 +137,12 @@ class SampleDataSeeder extends Seeder
         }
     }
 
-    private function seedStockIns(Carbon $now, int $adminId, array $supplierIds, $products): void
+    private function seedStockIns(Carbon $now, int $adminId, array $supplierIds, Collection $products): void
     {
         $this->command->info('Seeding stock-in records...');
 
-        // Only seed stock-ins if none exist yet
-        $existingStockIns = DB::table('stock_ins')->count();
+        // Only seed sample stock-in batches if none exist yet
+        $existingStockIns = DB::table('stock_ins')->where('reference_no', 'like', 'SI-%')->count();
         if ($existingStockIns === 0) {
 
             // Map: sku prefix => typical unit cost
@@ -190,7 +191,9 @@ class SampleDataSeeder extends Seeder
                     $costs  = $costMap[$prefix] ?? ['min' => 10, 'max' => 200, 'qty' => [10, 50]];
 
                     $qty      = rand($costs['qty'][0], $costs['qty'][1]);
-                    $unitCost = round(mt_rand((int)($costs['min'] * 100), (int)($costs['max'] * 100)) / 100, 2);
+                    $unitCost = $product->latest_unit_cost
+                        ? (float) $product->latest_unit_cost
+                        : round(mt_rand((int)($costs['min'] * 100), (int)($costs['max'] * 100)) / 100, 2);
                     $lineTotal = $qty * $unitCost;
 
                     $itemsForBatch[] = [
@@ -248,7 +251,7 @@ class SampleDataSeeder extends Seeder
         }
     }
 
-    private function seedProductPrices(Carbon $now, int $adminId, $products): void
+    private function seedProductPrices(Carbon $now, int $adminId, Collection $products): void
     {
         $this->command->info('Ensuring product prices...');
 
